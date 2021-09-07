@@ -6,6 +6,7 @@ import serial.tools.list_ports
 from time import sleep
 #PlantyCommands
 from enum import Enum
+from enum import IntEnum
 
 class PlantyConnect:
 	#Port to access Arduino. Baudrate 57600 default. Delay in ms between send and recieved messages
@@ -71,7 +72,7 @@ class TempOption(Enum):
 	TEMP = 1
 	HUMIDITY = 2
 	
-class ColorOption(Enum):
+class ColorOption(IntEnum):
 	PURPLE = 1
 	WHITE = 2
 	RED = 3
@@ -164,10 +165,31 @@ class PlantyCommands:
 			self.sendMessage = "MOTR=0," + str(power) + "," + str(duration)
 	
 	#Set LED
-	def setLight(write, ColorOption, power):
+	def setLight(self, write, ColorOption, power):
 		if write:
-			self.sendMessage = "LED=1," + str(ColorOption) + "," + str(power)
+			self.sendMessage = "LED=1," + str(int(ColorOption)) + "," + str(power)
 		else:
 			self.sendMessage = "LED=2"
+	
+	#Read/write light PI parameters
+	def setPI(self, write, kp, ki, t, maxControl):
+		if write:
+			self.sendMessage = "PISET=2," + str(kp) + "," + str(ki) + "," + str(t) + "," + str(maxControl) 
+		else:
+			self.sendMessage = "PISET=1"
+	
+	#Start liht PI
+	def startPI(self, on, setPoint):
+		if on:
+			self.sendMessage = "PI=2,1," + str(setPoint)
+		else:
+			self.sendMessage = "PI=2,0,0"
+	
+	#Read light PI parameters
+	def readPI(self):
+		self.sendMessage = "PI=1"
+	
+			
+	
 			
 					

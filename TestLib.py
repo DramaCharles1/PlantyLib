@@ -1,6 +1,7 @@
 from PlantyLib import PlantyConnect as con
 from PlantyLib import PlantyCommands as command
 from PlantyLib import TempOption
+from PlantyLib import ColorOption
 
 class TestLib:
 	def __init__(self):
@@ -32,13 +33,38 @@ class TestLib:
 		self.planty.readALS()
 		light = self.planty.recMessage
 		return light
+		
+	def start_motor(self):
+		self.planty.setMotor(True, 100, 5000)
+		return self.planty.sendMessage
+		
+	def white_light(self):
+		self.planty.setLight(True, ColorOption.WHITE, 255)
+		return self.planty.sendMessage
+		
+	def set_PI(self):
+		self.planty.setPI(True, 1, 1, 200, 20000)
+		return self.planty.sendMessage
+		
+	def read_PI(self):
+		self.planty.readPI()
+		return self.planty.sendMessage
+		
+	def start_PI(self):
+		self.planty.startPI(True,5000)
+		return self.planty.sendMessage
 
 if __name__ == "__main__":
 	test = TestLib()
-	print("Plant: " + test.read_plant())
-	print("Temp: " + test.read_temp())
-	print("Moisture: " + test.read_moisture())
-	print("ALS: " + test.read_ALS())
+	#print("Plant: " + test.read_plant())
+	#print("Temp: " + test.read_temp())
+	#print("Moisture: " + test.read_moisture())
+	#print("ALS: " + test.read_ALS())
+	print("Motor: " + test.start_motor())
+	print("LED: " + test.white_light())
+	print("Write PI parameters: " + test.set_PI())
+	print("Read PI parameters: " + test.read_PI())
+	print("Start PI: " + test.start_PI())
 #Send data
 #testMessage = "PLANT=1"
 #plantyConnect.write(testMessage)
