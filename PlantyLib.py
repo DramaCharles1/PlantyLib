@@ -131,4 +131,9 @@ class PlantyCommands:
 		self.__sendMessage()
 		self.__recMessage()
 		self.connect.setDelay(oldDelay)
+		
+	def readALS(self):
+		self.sendMessage = "ALS"
+		self.__sendMessage()
+		self.__recMessage()
 					
