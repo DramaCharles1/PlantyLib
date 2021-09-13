@@ -68,10 +68,12 @@ class PlantyConnect:
 	def setDelay(self,newDelay):
 		self.delay = newDelay
 
+#Temperature sensor options
 class TempOption(Enum):
 	TEMP = 1
 	HUMIDITY = 2
-	
+
+#LED color option
 class ColorOption(IntEnum):
 	PURPLE = 1
 	WHITE = 2
