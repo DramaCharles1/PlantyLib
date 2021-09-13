@@ -1,6 +1,8 @@
 *** Settings ***
 Documentation  Test robotframework
-Library  /home/pi/Repos/PlantyLib/Test/Resources/TestLib.py
+Library  ../Resources/TestLib.py
+*** Variables ***
+${hej}  lol
 *** Test Cases ***
 Connect to Planty
 	connect
