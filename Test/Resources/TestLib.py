@@ -1,12 +1,20 @@
+import sys
+sys.path.insert(0,"/home/pi/Repos/PlantyLib")
 from PlantyLib import PlantyConnect as con
 from PlantyLib import PlantyCommands as command
 from PlantyLib import TempOption
 from PlantyLib import ColorOption
 
+
 class TestLib:
 	def __init__(self):
-		#self.plantyConnect = con("",57600,0.1)		
+		#self.plantyConnect = con("",57600,0.1)	
+		
 		self.planty = command("",57600,0.1)
+		
+	def connect(self):
+		self.planty.connectToPlant()
+		return True
 		
 	def port_to_planty(self):
 		#print("Test PlantyCommand")
@@ -56,15 +64,16 @@ class TestLib:
 
 if __name__ == "__main__":
 	test = TestLib()
-	#print("Plant: " + test.read_plant())
+	test.connect()
+	print("Plant: " + test.read_plant())
 	#print("Temp: " + test.read_temp())
 	#print("Moisture: " + test.read_moisture())
 	#print("ALS: " + test.read_ALS())
-	print("Motor: " + test.start_motor())
-	print("LED: " + test.white_light())
-	print("Write PI parameters: " + test.set_PI())
-	print("Read PI parameters: " + test.read_PI())
-	print("Start PI: " + test.start_PI())
+	#print("Motor: " + test.start_motor())
+	#print("LED: " + test.white_light())
+	#print("Write PI parameters: " + test.set_PI())
+	#print("Read PI parameters: " + test.read_PI())
+	#print("Start PI: " + test.start_PI())
 #Send data
 #testMessage = "PLANT=1"
 #plantyConnect.write(testMessage)

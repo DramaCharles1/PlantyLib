@@ -82,7 +82,10 @@ class ColorOption(IntEnum):
 class PlantyCommands:
 	#Port to access Arduino. Baudrate 57600 default. Delay in ms between send and recieve
 	def __init__(self, port, baudrate, delay):
-		self.connect = PlantyConnect(port,baudrate,delay)
+		self.port = port
+		self.baudrate = baudrate
+		self.delay = delay
+		self.connect = None
 		self.recMessage = ""
 		self.sendMessage = ""
 		
@@ -114,6 +117,9 @@ class PlantyCommands:
 			self.recMessage = self.__getCommandValue(rec)
 		else:
 			raise Exception("Error when recieving message: " + str(rec))
+			
+	def connectToPlant(self):
+		self.connect = PlantyConnect(self.port,self.baudrate,self.delay)
 	
 	#Read plant name from NVM	
 	def readPlant(self):
