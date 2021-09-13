@@ -81,6 +81,7 @@ class ColorOption(IntEnum):
 	GREEN = 4
 	BLUE = 5
 			
+#Class containing all commads
 class PlantyCommands:
 	#Port to access Arduino. Baudrate 57600 default. Delay in ms between send and recieve
 	def __init__(self, port, baudrate, delay):
