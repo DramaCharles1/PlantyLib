@@ -1,4 +1,5 @@
 import sys
+import requests
 sys.path.insert(0,"/home/pi/Repos/PlantyLib")
 from PlantyLib import PlantyConnect as con
 from PlantyLib import PlantyCommands as command
@@ -61,11 +62,17 @@ class TestLib:
 	def start_PI(self):
 		self.planty.startPI(True,5000)
 		return self.planty.sendMessage
+		
+	def test_web_page(self):
+		url = "http://192.168.10.127"
+		r = requests.get(url)
+		return r.text
 
 if __name__ == "__main__":
 	test = TestLib()
 	test.connect()
 	print("Plant: " + test.read_plant())
+	print("Web page: " + str(test.test_web_page()))
 	#print("Temp: " + test.read_temp())
 	#print("Moisture: " + test.read_moisture())
 	#print("ALS: " + test.read_ALS())
