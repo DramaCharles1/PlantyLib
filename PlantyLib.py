@@ -9,196 +9,247 @@ from enum import Enum
 from enum import IntEnum
 
 class PlantyConnect:
-	#Port to access Arduino. Baudrate 57600 default. Delay in ms between send and recieved messages
-	def __init__(self, port, baudrate, delay):
+	'''
+	Port to access Arduino. Baudrate 57600 default. Delay in ms between send and recieve
+	'''
+	def __init__(self, port, baudrate, delay=50):
 		if port == "":
 			try:
-				self.port = self.__getPort()
+				self.port = self.__get_connected_port()
 			except Exception as e:
 				print(e) 
 		else:
 			self.port = port
-		
+
 		self.baudrate = baudrate
 		self.delay = delay
 		self.ser = None
-		
+
 		try:
-			self.ser = serial.Serial(self.port, self.baudrate) 
+			self.ser = serial.Serial(self.port, self.baudrate)
 		except serial.SerialException as SerialEx:
 			print(str(SerialEx))
-			
+
 		sleep(2)
-	
-	#Get connected port from arduino if no port has been specified		
-	def __getPort(self):
+
+	def __get_connected_port(self):
+		'''
+		Get connected port from arduino if no port has been specified
+		'''
 		portlist = serial.tools.list_ports.comports(include_links=False)
 		arduinoport = ""
-		
+
 		for port in portlist:
 			if "Genuino" in port.description:
 				arduinoport = port.device
-			
+
 		if arduinoport == "":
 			raise Exception("Could not find any arduino")
-			
+
 		return arduinoport
-	
-	#Close port
-	def closePort(self):
+
+	def close_port(self):
+		'''
+		Close serial port
+		'''
 		self.ser.flush()
 		self.ser.close()
 	
-	#Send message
-	def write(self, message):
+	def write(self, message: str):
+		'''
+		Write to serial port
+		'''
 		message = message + '\n'
 		self.ser.write(message.encode('utf-8'))
 		sleep(self.delay)
-	
-	#Read incoming message
-	def read(self):	
+
+	def read(self):
+		'''
+		read from serial port
+		'''
 		if self.ser.in_waiting > 0:
 			while self.ser.in_waiting > 0:
 				rec = self.ser.readline()
 			return rec
 		else:
 			raise Exception("No incoming message")
-	
-	#Set delay between send and recieve
-	def setDelay(self,newDelay):
-		self.delay = newDelay
 
-#Temperature sensor options
-class TempOption(Enum):
+	def set_delay(self,delay):
+		'''
+		Set delay between send and recieve
+		'''
+		self.delay = delay
+
+
+class Temp_option(Enum):
+	'''
+	Temperature sensor options
+	'''
 	TEMP = 1
 	HUMIDITY = 2
 
-#LED color option
-class ColorOption(IntEnum):
+
+class Light_color_option(IntEnum):
+	'''
+	Light color option
+	'''
 	PURPLE = 1
 	WHITE = 2
 	RED = 3
 	GREEN = 4
 	BLUE = 5
-			
-#Class containing all commads
-class PlantyCommands:
-	#Port to access Arduino. Baudrate 57600 default. Delay in ms between send and recieve
-	def __init__(self, port, baudrate, delay):
-		self.port = port
-		self.baudrate = baudrate
-		self.delay = delay
-		self.connect = None
+
+
+class PlantyCommands(PlantyConnect):
+	'''
+	Class with all commands
+	'''
+	def __init__(self, port, baudrate, delay=50):
+		super().__init__(port, baudrate, delay)
 		self.recMessage = ""
 		self.sendMessage = ""
 		
-	def __checkCommand(self, rec):
-		ok = "OK"
-		err = "ERR"
-	
+	def __check_command(self, rec):
+		'''
+		Check command for correct format
+		'''
 		if("OK" in str(rec)):
 			return True
 		elif ("ERR" in str(rec)):
 			return False
 		else:
-			raise Exception("Not a valid command recieved" + "rec: " + rec) 
-			
-	def __getCommandValue(self, rec):
+			raise Exception("Not a valid command recieved" + "rec: " + rec)
+
+	def __get_command_value(self, rec):
+		'''
+		Get command values
+		'''
 		separator = ['=',',','\n']
 		rec = str(rec).replace('=',',')
 		value = str(rec).split(',')
-	
+
 		return value[1]
-		
-	def __sendMessage(self):
-		self.connect.write(self.sendMessage)
-		self.sendMessage = ""
-		
-	def __recMessage(self):
-		rec = self.connect.read()
-		if self.__checkCommand(rec):
-			self.recMessage = self.__getCommandValue(rec)
+
+	def __send_message(self, message):
+		'''
+		Send message to Planty
+		'''
+		self.write(message)
+
+	def __recieve_message(self):
+		'''
+		Recieve message from Planty
+		'''
+		recieve = self.read()
+
+		if self.__check_command(recieve):
+			return self.__get_command_value(recieve)
 		else:
-			raise Exception("Error when recieving message: " + str(rec))
-			
-	def connectToPlant(self):
-		self.connect = PlantyConnect(self.port,self.baudrate,self.delay)
-	
-	#Read plant name from NVM	
-	def readPlant(self):
-		self.sendMessage = "PLANT=1"
-		self.__sendMessage()
-		self.__recMessage()
-	
-	#Write plant name to NVM	
-	def writePlant(self, plant):
-		oldDelay = self.connect.delay
-		self.connect.setDelay(0.5)
-		self.sendMessage = "PLANT=2," + plant
-		self.__sendMessage()
-		self.__recMessage()
-		self.connect.setDelay(oldDelay)
-	
-	#Read temperature or humidity
-	def readTemp(self, TempOption):
-		if TempOption == TempOption.TEMP:
-			self.sendMessage = "TEMP=1"
-			self.__sendMessage()
-			self.__recMessage()
-		elif TempOption == TempOption.HUMIDITY:
-			self.sendMessage = "TEMP=2"
-			self.__sendMessage()
-			self.__recMessage()
-	
-	#Read moisture sensor. Average value from n samples		
-	def readMoisture(self, samples):
-		oldDelay = self.connect.delay
-		newDelay = oldDelay + (samples*400)/1000
-		self.connect.setDelay(newDelay)
-		self.sendMessage = "MOIS=" + str(samples)
-		self.__sendMessage()
-		self.__recMessage()
-		self.connect.setDelay(oldDelay)
-	
-	#Read light sensor
-	def readALS(self):
-		self.sendMessage = "ALS"
-		self.__sendMessage()
-		self.__recMessage()
-	
-	#Start or stop motor. Duration [ms]
-	def setMotor(self, start, power, duration):
+			raise Exception("Error when recieving message: " + str(recieve))
+
+	def read_plant(self):
+		'''
+		Read what is planted
+		'''
+		command = "PLANT=1"
+		self.__send_message(command)
+		return self.__recieve_message()
+
+	def writePlant(self, plant: str):
+		'''
+		Write what is planted
+		'''
+		command = f"PLANT=2,{plant}"
+		self.__send_message(command)
+		self.__recieve_message()
+
+	def read_temp(self, temp_option: Temp_option):
+		'''
+		Read temperatue or humidity in house
+		'''
+		if temp_option == Temp_option.TEMP:
+			command = "TEMP=1"
+			self.__send_message(command)
+			return self.__recieve_message()
+
+		elif temp_option == Temp_option.HUMIDITY:
+			command = "TEMP=2"
+			self.__send_message(command)
+			return self.__recieve_message()
+
+		else:
+			raise AttributeError("No valid temp sensor option")
+
+	def read_moisture(self, samples: int):
+		'''
+		Read moisture sensor. Average value from n samples
+		samples(int): number of samples
+		'''
+		command = f"MOIS={str(samples)}"
+		self.__send_message(command)
+		return self.__recieve_message()
+
+	def read_ALS(self):
+		'''
+		Read ALS
+		'''
+		command = "ALS"
+		self.__send_message(command)
+		return self.__recieve_message()
+
+	def start_pump(self, start: bool, power: int, duration: int):
+		'''
+		Start or stop pump
+		start(bool): start or stop pump
+		power(int): pump power in %
+		duration(int): duration in ms
+		'''
 		if start:
-			self.sendMessage = "MOTR=1," + str(power) + "," + str(duration)
+			command = f"MOTR=1,{str(power)},{str(duration)}"
 		else:
-			self.sendMessage = "MOTR=0," + str(power) + "," + str(duration)
-	
-	#Set LED
-	def setLight(self, write, ColorOption, power):
+			command = f"MOTR=0,{str(power)},{str(duration)}"
+		self.__send_message(command)
+		self.__recieve_message()
+
+	def lights(self, write: bool, color_option: Light_color_option, power: int):
+		'''
+		Set LED lights. 
+		write(bool): read or write LED lights
+		color_option(Light_color_option): choose color
+		power(int): light power in %
+		'''
 		if write:
-			self.sendMessage = "LED=1," + str(int(ColorOption)) + "," + str(power)
+			command = f"LED=1,{str(int(color_option))},{str(power)}"
 		else:
-			self.sendMessage = "LED=2"
-	
-	#Read/write light PI parameters
-	def setPI(self, write, kp, ki, t, maxControl):
+			command = "LED=2"
+		self.__send_message(command)
+		self.__recieve_message()
+
+	def light_regulator_values(self, write: bool, kp: float, ki: float, t: int, max_signal: int):
+		'''
+		Set PI light regulator values
+		write(bool): read or write regulator values
+		kp(float): p part
+		ki(float): i part
+		t(int): integral time
+		max_signal(int): maximum signal
+		'''
 		if write:
-			self.sendMessage = "PISET=2," + str(kp) + "," + str(ki) + "," + str(t) + "," + str(maxControl) 
+			command = f"PISET=2,{str(kp)},{str(ki)},{str(t)},{str(max_signal)}"
 		else:
-			self.sendMessage = "PISET=1"
-	
-	#Start liht PI
-	def startPI(self, on, setPoint):
-		if on:
-			self.sendMessage = "PI=2,1," + str(setPoint)
+			command = "PISET=1"
+		self.__send_message(command)
+		self.__recieve_message()
+
+	def start_light_regulator(self, start: bool, set_point: int):
+		'''
+		Start or stop light regulator
+		start(bool): start or stop the light regulator
+		set_point(int): light set point
+		'''
+		if start:
+			command = f"PI=2,1,{str(set_point)}"
 		else:
-			self.sendMessage = "PI=2,0,0"
-	
-	#Read light PI parameters
-	def readPI(self):
-		self.sendMessage = "PI=1"
-	
-			
-	
-			
-					
+			command = "PI=2,0,0"
+		self.__send_message(command)
+		self.__recieve_message()
