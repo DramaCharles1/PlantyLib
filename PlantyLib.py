@@ -12,7 +12,7 @@ class PlantyConnect:
 	'''
 	Port to access Arduino. Baudrate 57600 default. Delay in ms between send and recieve
 	'''
-	def __init__(self, port, baudrate, delay=50):
+	def __init__(self, port: str, baudrate: int, delay: float):
 		if port == "":
 			try:
 				self.port = self.__get_connected_port()
@@ -31,6 +31,7 @@ class PlantyConnect:
 			print(str(SerialEx))
 
 		sleep(2)
+		print(f"Connected to: {self.port}")
 
 	def __get_connected_port(self):
 		'''
@@ -54,7 +55,7 @@ class PlantyConnect:
 		'''
 		self.ser.flush()
 		self.ser.close()
-	
+
 	def write(self, message: str):
 		'''
 		Write to serial port
@@ -74,7 +75,7 @@ class PlantyConnect:
 		else:
 			raise Exception("No incoming message")
 
-	def set_delay(self,delay):
+	def set_delay(self, delay: float):
 		'''
 		Set delay between send and recieve
 		'''
@@ -99,23 +100,22 @@ class Light_color_option(IntEnum):
 	GREEN = 4
 	BLUE = 5
 
+MOIS_DELAY = 500 #ms
 
 class PlantyCommands(PlantyConnect):
 	'''
 	Class with all commands
 	'''
-	def __init__(self, port, baudrate, delay=50):
+	def __init__(self, port="", baudrate=57600, delay=0.5):
 		super().__init__(port, baudrate, delay)
-		self.recMessage = ""
-		self.sendMessage = ""
-		
+
 	def __check_command(self, rec):
 		'''
 		Check command for correct format
 		'''
-		if("OK" in str(rec)):
+		if "OK" in str(rec):
 			return True
-		elif ("ERR" in str(rec)):
+		elif "ERR" in str(rec):
 			return False
 		else:
 			raise Exception("Not a valid command recieved" + "rec: " + rec)
@@ -130,10 +130,11 @@ class PlantyCommands(PlantyConnect):
 
 		return value[1]
 
-	def __send_message(self, message):
+	def __send_message(self, message: str):
 		'''
 		Send message to Planty
 		'''
+		print(f"send: {message}")
 		self.write(message)
 
 	def __recieve_message(self):
@@ -141,6 +142,7 @@ class PlantyCommands(PlantyConnect):
 		Recieve message from Planty
 		'''
 		recieve = self.read()
+		print(f"Recieve: {recieve}")
 
 		if self.__check_command(recieve):
 			return self.__get_command_value(recieve)
@@ -253,3 +255,33 @@ class PlantyCommands(PlantyConnect):
 			command = "PI=2,0,0"
 		self.__send_message(command)
 		self.__recieve_message()
+
+if __name__ == "__main__":
+	print("test program")
+	'''	planty_connect = PlantyConnect("",57600,0.1)
+	msg = "PLANT=1"
+	planty_connect.write(msg)
+
+	rec = planty_connect.read()
+	print(f"rec: {rec}")
+
+	planty_connect.close_port()'''
+
+	planty = PlantyCommands()
+
+	'''plant_read = planty.read_plant()
+	print(f"Plant: {plant_read}")
+
+	temp_read = planty.read_temp(Temp_option.TEMP)
+	print(f"Temperatur: {temp_read}")'''
+
+	'''humidity_read = planty.read_temp(Temp_option.HUMIDITY)
+	print(f"Humidity: {humidity_read}")'''
+
+	mois_read = planty.read_moisture(5)
+	print(f"Moisture: {mois_read}")
+
+	ALS_read = planty.read_ALS()
+	print(f"ALS: {ALS_read}")
+
+	planty.close_port()
