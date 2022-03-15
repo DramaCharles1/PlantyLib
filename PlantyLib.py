@@ -3,6 +3,7 @@
 #PlantyConnect
 import serial
 import serial.tools.list_ports
+from datetime import datetime
 from time import sleep
 #PlantyCommands
 from enum import Enum
@@ -12,7 +13,7 @@ class PlantyConnect:
 	'''
 	Port to access Arduino. Baudrate 57600 default. Delay in ms between send and recieve
 	'''
-	def __init__(self, port: str, baudrate: int, delay: float):
+	def __init__(self, port: str, baudrate: int, timeout: float):
 		if port == "":
 			try:
 				self.port = self.__get_connected_port()
@@ -22,11 +23,13 @@ class PlantyConnect:
 			self.port = port
 
 		self.baudrate = baudrate
-		self.delay = delay
 		self.ser = None
+		self.read_timeout = timeout
+		self.write_timeout = timeout
 
 		try:
-			self.ser = serial.Serial(self.port, self.baudrate)
+			self.ser = serial.Serial(self.port, self.baudrate, timeout=self.read_timeout,
+			 write_timeout=self.write_timeout)
 		except serial.SerialException as SerialEx:
 			print(str(SerialEx))
 
@@ -62,24 +65,20 @@ class PlantyConnect:
 		'''
 		message = message + '\n'
 		self.ser.write(message.encode('utf-8'))
-		sleep(self.delay)
 
 	def read(self):
 		'''
 		read from serial port
 		'''
-		if self.ser.in_waiting > 0:
-			while self.ser.in_waiting > 0:
-				rec = self.ser.readline()
-			return rec
-		else:
-			raise Exception("No incoming message")
-
-	def set_delay(self, delay: float):
-		'''
-		Set delay between send and recieve
-		'''
-		self.delay = delay
+		start = datetime.now()
+		while (datetime.now() - start).total_seconds() < self.read_timeout:
+			if self.ser.in_waiting > 0:
+				while self.ser.in_waiting > 0:
+					rec = self.ser.readline()
+				return rec
+			else:
+				sleep(0.5)
+		raise Exception("No incoming message")
 
 
 class Temp_option(Enum):
@@ -100,14 +99,16 @@ class Light_color_option(IntEnum):
 	GREEN = 4
 	BLUE = 5
 
-MOIS_DELAY = 500 #ms
+MOIS_DELAY = 0.5 #s
+MOIS_SAMPLES = 5
 
 class PlantyCommands(PlantyConnect):
 	'''
 	Class with all commands
 	'''
-	def __init__(self, port="", baudrate=57600, delay=0.5):
-		super().__init__(port, baudrate, delay)
+	def __init__(self, port="", baudrate=57600, timeout=MOIS_DELAY*(MOIS_SAMPLES + 1), delay=0.3):
+		super().__init__(port, baudrate, timeout)
+		self.delay = delay
 
 	def __check_command(self, rec):
 		'''
@@ -129,6 +130,11 @@ class PlantyCommands(PlantyConnect):
 		value = str(rec).split(',')
 
 		return value[1]
+
+	def __send_and_recieve(self, message: str):
+		self.__send_message(message)
+		sleep(self.delay)
+		return self.__recieve_message()
 
 	def __send_message(self, message: str):
 		'''
@@ -154,16 +160,16 @@ class PlantyCommands(PlantyConnect):
 		Read what is planted
 		'''
 		command = "PLANT=1"
-		self.__send_message(command)
-		return self.__recieve_message()
+		return self.__send_and_recieve(command)
+		#self.__send_message(command)
+		#return self.__recieve_message()
 
 	def writePlant(self, plant: str):
 		'''
 		Write what is planted
 		'''
 		command = f"PLANT=2,{plant}"
-		self.__send_message(command)
-		self.__recieve_message()
+		return self.__send_and_recieve(command)
 
 	def read_temp(self, temp_option: Temp_option):
 		'''
@@ -171,13 +177,11 @@ class PlantyCommands(PlantyConnect):
 		'''
 		if temp_option == Temp_option.TEMP:
 			command = "TEMP=1"
-			self.__send_message(command)
-			return self.__recieve_message()
+			return self.__send_and_recieve(command)
 
 		elif temp_option == Temp_option.HUMIDITY:
 			command = "TEMP=2"
-			self.__send_message(command)
-			return self.__recieve_message()
+			return self.__send_and_recieve(command)
 
 		else:
 			raise AttributeError("No valid temp sensor option")
@@ -188,16 +192,14 @@ class PlantyCommands(PlantyConnect):
 		samples(int): number of samples
 		'''
 		command = f"MOIS={str(samples)}"
-		self.__send_message(command)
-		return self.__recieve_message()
+		return self.__send_and_recieve(command)
 
 	def read_ALS(self):
 		'''
 		Read ALS
 		'''
 		command = "ALS"
-		self.__send_message(command)
-		return self.__recieve_message()
+		return self.__send_and_recieve(command)
 
 	def start_pump(self, start: bool, power: int, duration: int):
 		'''
@@ -210,8 +212,7 @@ class PlantyCommands(PlantyConnect):
 			command = f"MOTR=1,{str(power)},{str(duration)}"
 		else:
 			command = f"MOTR=0,{str(power)},{str(duration)}"
-		self.__send_message(command)
-		self.__recieve_message()
+		return self.__send_and_recieve(command)
 
 	def lights(self, write: bool, color_option: Light_color_option, power: int):
 		'''
@@ -224,8 +225,7 @@ class PlantyCommands(PlantyConnect):
 			command = f"LED=1,{str(int(color_option))},{str(power)}"
 		else:
 			command = "LED=2"
-		self.__send_message(command)
-		self.__recieve_message()
+		return self.__send_and_recieve(command)
 
 	def light_regulator_values(self, write: bool, kp: float, ki: float, t: int, max_signal: int):
 		'''
@@ -240,8 +240,7 @@ class PlantyCommands(PlantyConnect):
 			command = f"PISET=2,{str(kp)},{str(ki)},{str(t)},{str(max_signal)}"
 		else:
 			command = "PISET=1"
-		self.__send_message(command)
-		self.__recieve_message()
+		return self.__send_and_recieve(command)
 
 	def start_light_regulator(self, start: bool, set_point: int):
 		'''
@@ -253,8 +252,7 @@ class PlantyCommands(PlantyConnect):
 			command = f"PI=2,1,{str(set_point)}"
 		else:
 			command = "PI=2,0,0"
-		self.__send_message(command)
-		self.__recieve_message()
+		return self.__send_and_recieve(command)
 
 if __name__ == "__main__":
 	print("test program")
@@ -269,16 +267,16 @@ if __name__ == "__main__":
 
 	planty = PlantyCommands()
 
-	'''plant_read = planty.read_plant()
+	plant_read = planty.read_plant()
 	print(f"Plant: {plant_read}")
 
 	temp_read = planty.read_temp(Temp_option.TEMP)
-	print(f"Temperatur: {temp_read}")'''
+	print(f"Temperatur: {temp_read}")
 
-	'''humidity_read = planty.read_temp(Temp_option.HUMIDITY)
-	print(f"Humidity: {humidity_read}")'''
+	humidity_read = planty.read_temp(Temp_option.HUMIDITY)
+	print(f"Humidity: {humidity_read}")
 
-	mois_read = planty.read_moisture(5)
+	mois_read = planty.read_moisture(MOIS_SAMPLES)
 	print(f"Moisture: {mois_read}")
 
 	ALS_read = planty.read_ALS()
